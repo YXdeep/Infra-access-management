@@ -33,7 +33,7 @@ jobs:
                   data = yaml.safe_load(f)
               
               if not data or 'Users' not in data:
-                  print('❌ ERROR: Missing root element \"Users\" or file is empty.')
+                  print('ERROR: Missing root element \"Users\" or file is empty.')
                   sys.exit(1)
               
               for index, user in enumerate(data['Users']):
@@ -41,23 +41,23 @@ jobs:
                   required_fields = ['Username', 'Full name', 'Email', 'Public_Key', 'is_currently_employed', 'aws_roles']
                   for field in required_fields:
                       if field not in user:
-                          print(f'❌ ERROR: User entry at index {index} is missing the required field: \"{field}\"')
+                          print(f'ERROR: User entry at index {index} is missing the required field: \"{field}\"')
                           sys.exit(1)
                           
                   # 2. Validate SSH Key data structure format
                   if not str(user['Public_Key']).startswith(('ssh-rsa', 'ssh-ed25519', 'ecdsa-sha2-nistp256')):
-                      print(f'❌ ERROR: Invalid SSH Key format for user: {user.get(\"Username\", index)}')
+                      print(f'ERROR: Invalid SSH Key format for user: {user.get(\"Username\", index)}')
                       sys.exit(1)
                       
                   # 3. Handle data variations gracefully (Roles vs linux_groups)
                   if 'Roles' not in user and 'linux_groups' not in user:
-                      print(f'⚠️ WARNING: User entry at index {index} contains neither \"Roles\" nor \"linux_groups\".')
+                      print(f'WARNING: User entry at index {index} contains neither \"Roles\" nor \"linux_groups\".')
 
-              print('✅ SUCCESS: users.yaml format and all target fields match specifications!')
+              print('SUCCESS: users.yaml format and all target fields match specifications!')
           except yaml.YAMLError as exc:
-              print(f'❌ YAML Syntax Error: {exc}')
+              print(f'YAML Syntax Error: {exc}')
               sys.exit(1)
           except FileNotFoundError:
-              print('❌ ERROR: users.yaml file not found at repository root.')
+              print('ERROR: users.yaml file not found at repository root.')
               sys.exit(1)
           "

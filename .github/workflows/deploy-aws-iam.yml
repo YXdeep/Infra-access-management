@@ -1,15 +1,16 @@
-name: deploy-aws-iam
+name: Deploy AWS IAM and Linux Users
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'users.yaml'          
+      - 'users.yaml'
       - 'terraform/**'
+      - 'ansible-playbook.yml'
 
 concurrency:
-  group: terraform-deployment
+  group: production-deployment
   cancel-in-progress: false
 
 jobs:
@@ -24,8 +25,10 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install PyYAML
-        run: pip install pyyaml
+      - name: Install Dependencies
+        run: |
+          pip install pyyaml
+          pip install ansible
 
       - name: Pre-Deployment Identity Check
         run: |
@@ -37,18 +40,12 @@ jobs:
               data = yaml.safe_load(f)
           
           usernames = [user.get('Username') for user in data.get('Users', [])]
-          
-          # Check for placeholder strings
           if 'String' in usernames:
-              print('DEPLOYMENT BLOCKED: Please replace the placeholder \"String\" with unique usernames!')
+              print('DEPLOYMENT BLOCKED: Replace placeholder \"String\" with unique usernames!')
               sys.exit(1)
-              
-          # Check for duplicates
           if len(usernames) != len(set(usernames)):
-              print('DEPLOYMENT BLOCKED: Duplicate usernames found in Users.yaml!')
+              print('DEPLOYMENT BLOCKED: Duplicate usernames found!')
               sys.exit(1)
-
-          print('Verification complete. All usernames are unique.')
           "
 
       - name: Setup Terraform
@@ -63,12 +60,19 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Terraform Init
+      - name: Run Terraform (AWS Provisioning)
         run: |
           cd terraform
           terraform init
-
-      - name: Terraform Apply
-        run: |
-          cd terraform
           terraform apply -auto-approve -input=false
+
+      - name: Setup SSH Key for Linux Deployment
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.LINUX_DEPLOYMENT_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Run Ansible Playbook (Linux Provisioning)
+        run: |
+          # Replace 'your-server-ip-or-dns' with your actual target Linux server host address
+          ansible-playbook -i "your-server-ip-or-dns," -u ubuntu --private-key=~/.ssh/id_rsa ansible-playbook.yml --ssh-common-args='-o StrictHostKeyChecking=no'

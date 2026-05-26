@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'users.yaml'
+      - 'Users.yaml'
       - 'terraform/**'
       - 'ansible-playbook.yml'
 
@@ -36,7 +36,7 @@ jobs:
           import yaml
           import sys
 
-          with open('Users.yaml', 'r') as f:
+          with open('users.yaml', 'r') as f:
               data = yaml.safe_load(f)
           
           usernames = [user.get('Username') for user in data.get('Users', [])]
@@ -74,5 +74,4 @@ jobs:
 
       - name: Run Ansible Playbook (Linux Provisioning)
         run: |
-          # Replace 'your-server-ip-or-dns' with your actual target Linux server host address
-          ansible-playbook -i "your-server-ip-or-dns," -u ubuntu --private-key=~/.ssh/id_rsa ansible-playbook.yml --ssh-common-args='-o StrictHostKeyChecking=no'
+          ansible-playbook -i "172.16.8.37," -u ubuntu --private-key=~/.ssh/id_rsa ansible-playbook.yml --ssh-common-args='-o StrictHostKeyChecking=no'

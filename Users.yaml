@@ -19,10 +19,11 @@ Users:
       - Intern
     aws_roles:
       - DeveloperAccessRole    
-  - username: "String"
-    full_name: "ABCD"
-    email: "ABCD@company.com"
-    Public_key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC"
+  - Username: "String"
+    Full name: "ABCD"
+    Email: "ABCD@company.com"
+    is_currently_employed: true
+    Public_Key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC"
     linux_groups:
       - qa
     aws_roles:

@@ -1,0 +1,74 @@
+name: deploy-aws-iam
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'users.yaml'          
+      - 'terraform/**'
+
+concurrency:
+  group: terraform-deployment
+  cancel-in-progress: false
+
+jobs:
+  validate-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Pre-Deployment Identity Check
+        run: |
+          python -c "
+          import yaml
+          import sys
+
+          with open('Users.yaml', 'r') as f:
+              data = yaml.safe_load(f)
+          
+          usernames = [user.get('Username') for user in data.get('Users', [])]
+          
+          # Check for placeholder strings
+          if 'String' in usernames:
+              print('DEPLOYMENT BLOCKED: Please replace the placeholder \"String\" with unique usernames!')
+              sys.exit(1)
+              
+          # Check for duplicates
+          if len(usernames) != len(set(usernames)):
+              print('DEPLOYMENT BLOCKED: Duplicate usernames found in Users.yaml!')
+              sys.exit(1)
+
+          print('Verification complete. All usernames are unique.')
+          "
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Apply
+        run: |
+          cd terraform
+          terraform apply -auto-approve -input=false

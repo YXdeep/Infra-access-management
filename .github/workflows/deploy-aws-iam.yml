@@ -1,4 +1,4 @@
-name: Deploy AWS IAM and Linux Users
+name: Deploy Linux Users
 
 on:
   push:
@@ -6,22 +6,18 @@ on:
       - main
     paths:
       - 'users.yaml'
-      - 'terraform/**'
       - 'ansible-playbook.yml'
 
 concurrency:
   group: production-deployment
   cancel-in-progress: false
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   validate-and-deploy:
     runs-on: ubuntu-latest
-
-    # Forces all actions to run on Node.js 24 regardless of their declared target.
-    # Required until GitHub officially ships Node.js 24 builds of checkout/setup-python.
-    # Tracked upstream: https://github.com/actions/runner/issues/4295
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout Code
@@ -57,24 +53,6 @@ jobs:
 
           print('Identity check passed.')
           "
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.6.0
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Run Terraform (AWS Provisioning)
-        run: |
-          cd terraform
-          terraform init
-          terraform apply -auto-approve -input=false
 
       - name: Setup SSH Key for Linux Deployment
         run: |

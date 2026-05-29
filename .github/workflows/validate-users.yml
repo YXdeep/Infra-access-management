@@ -10,12 +10,19 @@ on:
 jobs:
   lint-and-validate:
     runs-on: ubuntu-latest
+
+    # Forces all actions to run on Node.js 24 regardless of their declared target.
+    # Required until GitHub officially ships Node.js 24 builds of checkout/setup-python.
+    # Tracked upstream: https://github.com/actions/runner/issues/4295
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5.6.0
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
@@ -25,39 +32,67 @@ jobs:
       - name: Validate YAML Syntax and Schema
         run: |
           python -c "
-          import yaml
-          import sys
+          import yaml, sys
 
           try:
               with open('users.yaml', 'r') as f:
                   data = yaml.safe_load(f)
-              
+
               if not data or 'Users' not in data:
-                  print('ERROR: Missing root element \"Users\" or file is empty.')
+                  print('ERROR: Missing root key \"Users\" or file is empty.')
                   sys.exit(1)
-              
+
+              required_fields = [
+                  'Username', 'Full name', 'Email',
+                  'Public_Key', 'Date_Joined',
+                  'is_currently_employed', 'aws_roles'
+              ]
+
+              usernames = []
+
               for index, user in enumerate(data['Users']):
-                  # 1. Validate all mandatory fields (including Date_Joined used by Terraform)
-                  required_fields = ['Username', 'Full name', 'Email', 'Public_Key', 'Date_Joined', 'is_currently_employed', 'aws_roles']
+
+                  # 1. Check all required fields are present
                   for field in required_fields:
                       if field not in user:
-                          print(f'ERROR: User entry at index {index} is missing the required field: \"{field}\"')
+                          print(f'ERROR: User at index {index} is missing required field: \"{field}\"')
                           sys.exit(1)
-                          
-                  # 2. Validate SSH Key format
-                  if not str(user['Public_Key']).startswith(('ssh-rsa', 'ssh-ed25519', 'ecdsa-sha2-nistp256')):
-                      print(f'ERROR: Invalid SSH Key format for user: {user.get(\"Username\", index)}')
-                      sys.exit(1)
-                      
-                  # 3. Warn if neither Roles nor linux_groups are present
-                  if 'Roles' not in user and 'linux_groups' not in user:
-                      print(f'WARNING: User entry at index {index} contains neither \"Roles\" nor \"linux_groups\".')
 
-              print('SUCCESS: users.yaml format and all target fields match specifications!')
+                  # 2. Reject placeholder usernames
+                  if user['Username'] == 'String':
+                      print(f'ERROR: User at index {index} still has placeholder Username \"String\". Replace it with a real username.')
+                      sys.exit(1)
+
+                  # 3. Collect usernames to check for duplicates
+                  usernames.append(user['Username'])
+
+                  # 4. Validate SSH key format
+                  valid_key_prefixes = ('ssh-rsa', 'ssh-ed25519', 'ecdsa-sha2-nistp256')
+                  if not str(user['Public_Key']).startswith(valid_key_prefixes):
+                      print(f'ERROR: Invalid SSH key format for user: {user[\"Username\"]}')
+                      sys.exit(1)
+
+                  # 5. Validate aws_roles are full ARNs
+                  for arn in user['aws_roles']:
+                      if not str(arn).startswith('arn:aws:iam::'):
+                          print(f'ERROR: aws_roles entry \"{arn}\" for user \"{user[\"Username\"]}\" is not a full ARN. Use format: arn:aws:iam::aws:policy/PolicyName or arn:aws:iam::ACCOUNT_ID:policy/PolicyName')
+                          sys.exit(1)
+
+                  # 6. Warn if neither Roles nor linux_groups are present
+                  if 'Roles' not in user and 'linux_groups' not in user:
+                      print(f'WARNING: User \"{user[\"Username\"]}\" has neither \"Roles\" nor \"linux_groups\" defined.')
+
+              # 7. Check for duplicate usernames
+              if len(usernames) != len(set(usernames)):
+                  print('ERROR: Duplicate usernames found in users.yaml.')
+                  sys.exit(1)
+
+              print('SUCCESS: users.yaml passed all validation checks.')
+
           except yaml.YAMLError as exc:
               print(f'YAML Syntax Error: {exc}')
               sys.exit(1)
           except FileNotFoundError:
-              print('ERROR: users.yaml file not found at repository root.')
+              print('ERROR: users.yaml not found at repository root.')
               sys.exit(1)
           "

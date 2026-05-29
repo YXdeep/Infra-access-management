@@ -37,19 +37,19 @@ jobs:
                   sys.exit(1)
               
               for index, user in enumerate(data['Users']):
-                  # 1. Validate mandatory fields present in BOTH user profiles
-                  required_fields = ['Username', 'Full name', 'Email', 'Public_Key', 'is_currently_employed', 'aws_roles']
+                  # 1. Validate all mandatory fields (including Date_Joined used by Terraform)
+                  required_fields = ['Username', 'Full name', 'Email', 'Public_Key', 'Date_Joined', 'is_currently_employed', 'aws_roles']
                   for field in required_fields:
                       if field not in user:
                           print(f'ERROR: User entry at index {index} is missing the required field: \"{field}\"')
                           sys.exit(1)
                           
-                  # 2. Validate SSH Key data structure format
+                  # 2. Validate SSH Key format
                   if not str(user['Public_Key']).startswith(('ssh-rsa', 'ssh-ed25519', 'ecdsa-sha2-nistp256')):
                       print(f'ERROR: Invalid SSH Key format for user: {user.get(\"Username\", index)}')
                       sys.exit(1)
                       
-                  # 3. Handle data variations gracefully (Roles vs linux_groups)
+                  # 3. Warn if neither Roles nor linux_groups are present
                   if 'Roles' not in user and 'linux_groups' not in user:
                       print(f'WARNING: User entry at index {index} contains neither \"Roles\" nor \"linux_groups\".')
 

@@ -12,4 +12,6 @@ This repository serves as the single source of truth for user access across our 
 3. Open a Pull Request (PR).
 4. Once an administrator reviews and merges your PR, automation will automatically provision your accounts.
 
+Currently work in progress! T_T
+
 

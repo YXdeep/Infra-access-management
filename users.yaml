@@ -1,7 +1,7 @@
 Users:
-  - Username: "Yash"
-    Full name: "Yashvardhan Deep"
-    Email: " yashvardhan.deep@medhastra.ai"
+  - Username: "jdoe"
+    Full name: "John Doe"
+    Email: "jdoe@company.com"
     Public_Key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC"
     Date_Joined: "2022-03-15T09:00:00"
     is_currently_employed: true

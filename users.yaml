@@ -5,9 +5,18 @@ Users:
     Public_Key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC"
     Date_Joined: "2022-03-15T09:00:00"
     is_currently_employed: true
-    Roles:
+    Roles: 
       - Developer
+      - Junior_Developer
+      - Frontend_Engineer
       - Backend_Engineer
+      - IT_Specialist
+      - DevOps_Engineer
+      - AI/ML_Engineer
+      - Cybersecurity_Analyst
+      - HR
+      - Management
+      - Intern
     aws_roles:
       - arn:aws:iam::aws:policy/PowerUserAccess
 

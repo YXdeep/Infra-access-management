@@ -3,9 +3,9 @@ Users:
     Full name: "ABCD"
     Email: "ABCD@company.com"
     Public_Key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC"
-    Date_Joined: 1990-10-10T10:00:00
+    Date_Joined: "1990-10-10T10:00:00"
     is_currently_employed: true
-    Roles: 
+    Roles:
       - Developer
       - Junior_Developer
       - Frontend_Engineer
@@ -18,12 +18,14 @@ Users:
       - Management
       - Intern
     aws_roles:
-      - DeveloperAccessRole    
+      - DeveloperAccessRole
+
   - Username: "String"
     Full name: "ABCD"
     Email: "ABCD@company.com"
-    is_currently_employed: true
     Public_Key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC"
+    Date_Joined: "1990-10-10T10:00:00"
+    is_currently_employed: true
     linux_groups:
       - qa
     aws_roles:

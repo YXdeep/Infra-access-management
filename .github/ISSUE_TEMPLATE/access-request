@@ -1,0 +1,63 @@
+name: Access Request
+description: Request a new user account on the Linux server
+title: "[ACCESS REQUEST] <your username here>"
+labels: ["access-request"]
+body:
+  - type: input
+    id: username
+    attributes:
+      label: Username
+      description: Your desired Linux username (lowercase, no spaces)
+      placeholder: jdoe
+    validations:
+      required: true
+
+  - type: input
+    id: full_name
+    attributes:
+      label: Full Name
+      placeholder: John Doe
+    validations:
+      required: true
+
+  - type: input
+    id: email
+    attributes:
+      label: Email Address
+      placeholder: jdoe@company.com
+    validations:
+      required: true
+
+  - type: textarea
+    id: public_key
+    attributes:
+      label: SSH Public Key
+      description: Paste your public key here (run `cat ~/.ssh/id_rsa.pub` or `cat ~/.ssh/id_ed25519.pub`)
+      placeholder: "ssh-rsa AAAAB3NzaC1yc2E..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: linux_group
+    attributes:
+      label: Linux Group
+      description: Which group should you be added to?
+      options:
+        - developers
+        - qa
+        - devops
+        - readonly
+    validations:
+      required: true
+
+  - type: dropdown
+    id: aws_role
+    attributes:
+      label: AWS Role
+      description: Which AWS policy do you need?
+      options:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
+        - arn:aws:iam::aws:policy/PowerUserAccess
+        - arn:aws:iam::aws:policy/AdministratorAccess
+    validations:
+      required: true

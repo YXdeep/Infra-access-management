@@ -1,0 +1,142 @@
+name: Create User PR from Access Request
+
+on:
+  issues:
+    types: [labeled]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  create-pr:
+    # Only run when the 'access-request' label is added to an issue
+    if: github.event.label.name == 'access-request'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: pip install pyyaml
+
+      - name: Parse Issue Form and Create PR
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python << 'PYTHON'
+          import yaml, os, re, subprocess
+          from datetime import datetime, timezone
+
+          body = os.environ['ISSUE_BODY']
+          issue_number = os.environ['ISSUE_NUMBER']
+
+          def parse_field(label, text):
+              pattern = rf'### {re.escape(label)}\s*\n+(.+?)(?=\n###|\Z)'
+              match = re.search(pattern, text, re.DOTALL)
+              return match.group(1).strip() if match else ''
+
+          username    = parse_field('Username', body)
+          full_name   = parse_field('Full Name', body)
+          email       = parse_field('Email Address', body)
+          public_key  = parse_field('SSH Public Key', body)
+          linux_group = parse_field('Linux Group', body)
+          aws_role    = parse_field('AWS Role', body)
+
+          # Basic validation
+          errors = []
+          if not username or username == '_No response_':
+              errors.append('Username is missing')
+          if not re.match(r'^[a-z][a-z0-9_-]{0,31}$', username):
+              errors.append(f'Invalid username format: {username}')
+          if not public_key.startswith(('ssh-rsa', 'ssh-ed25519', 'ecdsa-sha2')):
+              errors.append('Invalid SSH public key format')
+
+          if errors:
+              print('Validation failed:')
+              for e in errors:
+                  print(f'  - {e}')
+              exit(1)
+
+          # Load existing users.yaml
+          with open('users.yaml', 'r') as f:
+              data = yaml.safe_load(f)
+
+          # Check for duplicate username
+          existing = [u['Username'] for u in data.get('Users', [])]
+          if username in existing:
+              print(f'ERROR: Username "{username}" already exists in users.yaml')
+              exit(1)
+
+          # Build new user entry
+          new_user = {
+              'Username': username,
+              'Full name': full_name,
+              'Email': email,
+              'Public_Key': public_key,
+              'Date_Joined': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S'),
+              'is_currently_employed': True,
+              'linux_groups': [linux_group],
+              'aws_roles': [aws_role],
+          }
+
+          data['Users'].append(new_user)
+
+          with open('users.yaml', 'w') as f:
+              yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+          print(f'Added user: {username}')
+
+          # Git config
+          subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
+          subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=True)
+
+          # Create branch
+          branch = f'access-request/{username}-{issue_number}'
+          subprocess.run(['git', 'checkout', '-b', branch], check=True)
+          subprocess.run(['git', 'add', 'users.yaml'], check=True)
+          subprocess.run(['git', 'commit', '-m', f'feat: add user {username} (issue #{issue_number})'], check=True)
+          subprocess.run(['git', 'push', 'origin', branch], check=True)
+
+          # Create PR via GitHub CLI
+          pr_body = f"""## Access Request for `{username}`
+
+          This PR was automatically generated from Issue #{issue_number}.
+
+          | Field | Value |
+          |---|---|
+          | Username | `{username}` |
+          | Full Name | {full_name} |
+          | Email | {email} |
+          | Linux Group | `{linux_group}` |
+          | AWS Role | `{aws_role}` |
+
+          **Review the entry in `users.yaml`, then approve and merge to provision the user.**
+
+          Closes #{issue_number}
+          """
+
+          subprocess.run([
+              'gh', 'pr', 'create',
+              '--title', f'[Access Request] Add user {username}',
+              '--body', pr_body,
+              '--base', 'main',
+              '--head', branch,
+              '--label', 'access-request',
+          ], check=True)
+
+          print(f'PR created for branch: {branch}')
+          PYTHON

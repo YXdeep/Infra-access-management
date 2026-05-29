@@ -3,11 +3,10 @@
   hosts: all
   become: true
   vars:
-    # Parse Users.yaml file dynamically
     user_data: "{{ lookup('file', 'users.yaml') | from_yaml }}"
 
   tasks:
-    - name: Ensure targeted user accounts exist or are purged
+    - name: Ensure user accounts exist or are removed based on employment status
       ansible.builtin.user:
         name: "{{ item.Username }}"
         comment: "{{ item['Full name'] }} ({{ item.Email }})"
@@ -17,7 +16,7 @@
       loop: "{{ user_data.Users }}"
       when: item.Username != "String"
 
-    - name: Deploy public SSH keys for active employees
+    - name: Deploy SSH public keys for active employees
       ansible.builtin.authorized_key:
         user: "{{ item.Username }}"
         state: present
@@ -27,7 +26,7 @@
         - item.Username != "String"
         - item.is_currently_employed == true
         - item.Public_Key is defined
-        - item.Public_Key != ""
+        - item.Public_Key | length > 0
 
     - name: Assign users to their Linux groups
       ansible.builtin.user:

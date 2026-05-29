@@ -10,7 +10,7 @@
     - name: Ensure targeted user accounts exist or are purged
       ansible.builtin.user:
         name: "{{ item.Username }}"
-        comment: "{{ item['Full name'] }} ({{ item.Email }})"
+        comment: "{{ item['Full name'] }} ({{ item.Emai}})"
         shell: /bin/bash
         state: "{{ 'present' if item.is_currently_employed else 'absent' }}"
         remove: "{{ 'yes' if not item.is_currently_employed else 'no' }}"

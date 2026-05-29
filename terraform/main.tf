@@ -9,7 +9,7 @@ locals {
 
   # 3. Filter data blocks: extract only employees whose employment status is actively set to true
   active_users = {
-    for user in local.parsed_data.users : user.Username => user
+    for user in local.parsed_data.Users : user.Username => user
     if user.is_currently_employed == true
   }
 }
@@ -24,8 +24,8 @@ resource "aws_iam_user" "gitops_users" {
   # Automatically tag each account with metadata parsed from your file elements
   tags = {
     Email       = each.value.Email
-    FullName    = each.value["Full name"]
-    DateJoined  = each.value.Date_Joined
+    FullName    = try(each.value["Full name"], "")
+    DateJoined  = try(each.value.Date_Joined, "")
   }
 }
 

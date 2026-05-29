@@ -16,12 +16,19 @@ concurrency:
 jobs:
   validate-and-deploy:
     runs-on: ubuntu-latest
+
+    # Forces all actions to run on Node.js 24 regardless of their declared target.
+    # Required until GitHub officially ships Node.js 24 builds of checkout/setup-python.
+    # Tracked upstream: https://github.com/actions/runner/issues/4295
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5.6.0
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
@@ -33,19 +40,22 @@ jobs:
       - name: Pre-Deployment Identity Check
         run: |
           python -c "
-          import yaml
-          import sys
+          import yaml, sys
 
           with open('users.yaml', 'r') as f:
               data = yaml.safe_load(f)
-          
+
           usernames = [user.get('Username') for user in data.get('Users', [])]
+
           if 'String' in usernames:
-              print('DEPLOYMENT BLOCKED: Replace placeholder \"String\" with unique usernames!')
+              print('DEPLOYMENT BLOCKED: Replace placeholder \"String\" with real unique usernames!')
               sys.exit(1)
+
           if len(usernames) != len(set(usernames)):
-              print('DEPLOYMENT BLOCKED: Duplicate usernames found!')
+              print('DEPLOYMENT BLOCKED: Duplicate usernames detected in users.yaml!')
               sys.exit(1)
+
+          print('Identity check passed.')
           "
 
       - name: Setup Terraform
@@ -74,4 +84,9 @@ jobs:
 
       - name: Run Ansible Playbook (Linux Provisioning)
         run: |
-          ansible-playbook -i "${{ secrets.LINUX_HOST }}," -u ubuntu --private-key=~/.ssh/id_rsa ansible-playbook.yml --ssh-common-args='-o StrictHostKeyChecking=no'
+          ansible-playbook \
+            -i "${{ secrets.LINUX_HOST }}," \
+            -u ubuntu \
+            --private-key=~/.ssh/id_rsa \
+            ansible-playbook.yml \
+            --ssh-common-args='-o StrictHostKeyChecking=no'
